@@ -20,6 +20,7 @@ export const AuthView = () => {
     onError: () => {
       console.error('Error al abrir el popup de Google');
     },
+    //Esta parte se utiliza para recibir el código de autorización code
     flow: 'auth-code',
   });
 
