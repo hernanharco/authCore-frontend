@@ -5,8 +5,13 @@ import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 import { useGoogleLogin } from '@react-oauth/google'; // 1. Importamos el hook de Google
 import { useAuth } from '@/hooks/useAuth';
 
+//Capturamos los datos del navegador
+import { useRouter, useSearchParams } from 'next/navigation';
+
 export const AuthView = () => {
   const auth = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams(); // 2. Capturamos los parámetros de la URL  
 
   // --- CONFIGURACIÓN DE GOOGLE ---
   // Esta función abre el popup y maneja la respuesta de Google
@@ -15,7 +20,12 @@ export const AuthView = () => {
       // Enviamos el access_token al backend mediante tu hook useAuth
       // await auth.loginWithGoogle(tokenResponse.access_token);
       //Ahora recibimos un 'code' que debemos enviar al backend
-      await auth.loginWithGoogle(tokenResponse.code);
+      const result = await auth.loginWithGoogle(tokenResponse.code);
+
+      if (result) {
+        handleRedirect(); //Redirigimos tras el éxito con Google
+      }
+
     },
     onError: () => {
       console.error('Error al abrir el popup de Google');
@@ -23,6 +33,19 @@ export const AuthView = () => {
     //Esta parte se utiliza para recibir el código de autorización code
     flow: 'auth-code',
   });
+
+  // Función auxiliar para manejar la lógica de salto
+  const handleRedirect = () => {
+    const redirectTo = searchParams.get('redirect'); // Captura el ?redirect=...    
+
+    if (redirectTo && redirectTo !== 'null') {
+      // Si existe una URL externa (ej: localhost:3001), saltamos allá
+      window.location.href = redirectTo;
+    } else {
+      // Si no hay parámetro, vamos al dashboard local de AuthCore
+      router.push('/dashboard');
+    }
+  };
 
   const [view, setView] = useState<'login' | 'forgot' | 'reset'>('login');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,15 +56,21 @@ export const AuthView = () => {
     resetToken: '',
   });
 
+  // Manejador de login 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = await auth.login({ username: formData.username, password: formData.password });
+
+    // Si el login fue exitoso, ejecutamos la redirección
+    if (result) {
+      handleRedirect();
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (auth.error || auth.success) auth.clearMessages();
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await auth.login({ username: formData.username, password: formData.password });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

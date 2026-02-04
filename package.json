@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup:dev": "bash setup.sh development",
+    "setup:prod": "bash setup.sh production"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.4",

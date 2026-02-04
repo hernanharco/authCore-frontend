@@ -28,8 +28,8 @@ export const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  console.log('auth', auth);
-  console.log('usersHook', usersHook);
+  // console.log('auth', auth);
+  // console.log('usersHook', usersHook);
 
   // useEffect(() => {
   //   // Verificar autenticación al cargar

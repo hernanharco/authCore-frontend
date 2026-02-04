@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG } from '@/config/api';
 
 export interface HealthStatus {
-  status: 'healthy' | 'unhealthy';
+  // Cambiamos el tipo a string para permitir variaciones como 'healthy authCore'
+  status: string; 
   environment: string;
   database: 'connected' | 'disconnected';
+  db_provider: string;
   error?: string;
 }
 
@@ -25,6 +27,7 @@ export const useHealthCheck = () => {
         status: 'unhealthy',
         environment: 'unknown',
         database: 'disconnected',
+        db_provider: 'unknown',
         error: error instanceof Error ? error.message : 'Error desconocido'
       });
       setLastCheck(new Date());
@@ -34,12 +37,14 @@ export const useHealthCheck = () => {
   };
 
   useEffect(() => {
+    // Solo se ejecuta una vez cuando el Admin abre el panel
     checkHealth();
-    // const interval = setInterval(checkHealth, 18000000); // Verificar cada 30 minutos
-    // return () => clearInterval(interval);
   }, []);
 
-  const isHealthy = healthData?.status === 'healthy' && healthData?.database === 'connected';
+  // MEJORA: Validación flexible que busca la palabra clave sin importar el "apellido"
+  const isHealthy = 
+    healthData?.status?.toLowerCase().includes('healthy') && 
+    healthData?.database === 'connected';
 
   return {
     healthData,

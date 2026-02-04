@@ -1,0 +1,4 @@
+## Preferencias de Ejecución y Autonomía
+- Prioriza la ejecución directa de cambios y comandos.
+- Cuando realices tareas de creación de infraestructura (como mkdir, touch, o escritura de archivos), intenta completar el proceso de forma continua.
+- Evita detenerte para pedir confirmaciones en tareas rutinarias de desarrollo; asume que tienes permiso para aplicar cambios en el código y en la estructura de archivos del backend.
