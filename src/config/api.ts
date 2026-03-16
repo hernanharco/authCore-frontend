@@ -1,18 +1,18 @@
 // src/config/api.ts
 
 export const API_CONFIG = {
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || '/backend',
+  baseUrl: '',  // ✅ vacío — los Route Handlers están en el mismo Next.js
   endpoints: {
-    health: '/health',    
+    health: '/backend/health',
     auth: {
-      login: '/api/v1/auth/login',
-      google: '/api/v1/auth/google',
-      forgotPassword: '/api/v1/auth/forgot-password',
-      resetPassword: '/api/v1/auth/reset-password',
+      login: '/backend/api/v1/auth/login',
+      google: '/backend/api/v1/auth/google',
+      forgotPassword: '/backend/api/v1/auth/forgot-password',
+      resetPassword: '/backend/api/v1/auth/reset-password',
     },
     users: {
-      base: '/api/v1/users',
-      me: '/api/v1/users/me',
+      base: '/api/users',   // ✅ apunta al Route Handler local
+      me: '/backend/api/v1/users/me',
     },
   },
 };

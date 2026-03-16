@@ -7,9 +7,7 @@ import type {
   User,
   CreateUserRequest,
   UpdateUserRequest,
-  UsersResponse,
-  UserResponse,
-  DeleteUserResponse,
+  UserRole,
   UsersState,
   UsersActions
 } from '@/types/user';
@@ -82,38 +80,42 @@ export const useUsers = (): UsersState & UsersActions => {
       setLoading(true);
       setError(null);
 
-      const data: UsersResponse = await authenticatedFetch(
-        `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.base}`
+      const response = await fetch(
+        `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.base}`,
+        { credentials: 'include' }
       );
 
-      if (data.success) {
-        setUsers(data.data);
-        setSuccess('Usuarios cargados exitosamente');
-      } else {
-        throw new Error(data.message || 'Error al cargar usuarios');
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
+
+      const data: User[] = await response.json();
+      setUsers(data);
+      setSuccess('Usuarios cargados exitosamente');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setError, setSuccess, setUsers, authenticatedFetch]);
+  }, [setLoading, setError, setSuccess, setUsers]);
 
   const fetchMe = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const data: UserResponse = await authenticatedFetch(
-        `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.me}`
+      const response = await fetch(
+        `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.me}`,
+        { credentials: 'include' }
       );
 
-      if (data.success) {
-        setCurrentUser(data.data);
-      } else {
-        throw new Error(data.message || 'Error al cargar usuario actual');
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
+
+      const data: User = await response.json();
+      setCurrentUser(data);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setError(errorMessage);
@@ -121,32 +123,35 @@ export const useUsers = (): UsersState & UsersActions => {
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setError, setCurrentUser, authenticatedFetch]);
+  }, [setLoading, setError, setCurrentUser]);
 
   const createUser = useCallback(async (userData: CreateUserRequest): Promise<boolean> => {
     try {
       setCreating(true);
       setError(null);
 
-      const data: UserResponse = await authenticatedFetch(
+      const response = await fetch(
         `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.base}`,
         {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(userData),
+          credentials: 'include',
         }
       );
 
-      if (data.success) {
-        // SINCRONIZACIÓN: Añadir el nuevo usuario a la lista local
-        setState(prev => ({
-          ...prev,
-          users: [...prev.users, data.data],
-        }));
-        setSuccess('Usuario creado exitosamente');
-        return true;
-      } else {
-        throw new Error(data.message || 'Error al crear usuario');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
       }
+
+      const newUser: User = await response.json();
+      setState(prev => ({
+        ...prev,
+        users: [...prev.users, newUser],
+      }));
+      setSuccess('Usuario creado exitosamente');
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setError(errorMessage);
@@ -157,37 +162,83 @@ export const useUsers = (): UsersState & UsersActions => {
   }, []);
 
   const updateUser = useCallback(async (userId: string, userData: UpdateUserRequest): Promise<boolean> => {
+      try {
+      setUpdating(true);
+      setError(null);
+
+      // 👇 TEMPORAL
+      console.log('PUT body:', JSON.stringify(userData));
+
+      const response = await fetch(
+        `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.base}/${userId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData),
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      const updatedUser: User = await response.json();
+      setState(prev => ({
+        ...prev,
+        users: prev.users.map(user =>
+          user.id === userId ? updatedUser : user
+        ),
+      }));
+
+      if (state.currentUser?.id === userId) {
+        setCurrentUser(updatedUser);
+      }
+
+      setSuccess('Usuario actualizado exitosamente');
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      setError(errorMessage);
+      return false;
+    } finally {
+      setUpdating(false);
+    }
+  }, []);
+
+  const updateUserRole = useCallback(async (userId: string, role: UserRole): Promise<boolean> => {
     try {
       setUpdating(true);
       setError(null);
 
-      const data: UserResponse = await authenticatedFetch(
-        `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.base}/${userId}`,
+      console.log('PATCH role body:', JSON.stringify({ role }));
+
+      const response = await fetch(
+        `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.base}/${userId}/role`,
         {
-          method: 'PUT',
-          body: JSON.stringify(userData),
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role }),
+          credentials: 'include',
         }
       );
 
-      if (data.success) {
-        // SINCRONIZACIÓN: Actualizar el usuario en la lista local
-        setState(prev => ({
-          ...prev,
-          users: prev.users.map(user =>
-            user.id === userId ? data.data : user
-          ),
-        }));
-        
-        // Si es el usuario actual, actualizarlo también
-        if (state.currentUser?.id === userId) {
-          setCurrentUser(data.data);
-        }
-        
-        setSuccess('Usuario actualizado exitosamente');
-        return true;
-      } else {
-        throw new Error(data.message || 'Error al actualizar usuario');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
       }
+
+      const updatedUser: User = await response.json();
+      setState(prev => ({
+        ...prev,
+        users: prev.users.map(user =>
+          user.id === userId ? updatedUser : user
+        ),
+      }));
+
+      setSuccess('Rol actualizado correctamente');
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setError(errorMessage);
@@ -202,30 +253,31 @@ export const useUsers = (): UsersState & UsersActions => {
       setDeleting(true);
       setError(null);
 
-      const data: DeleteUserResponse = await authenticatedFetch(
+      const response = await fetch(
         `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.users.base}/${userId}`,
         {
           method: 'DELETE',
+          credentials: 'include',
         }
       );
 
-      if (data.success) {
-        // SINCRONIZACIÓN: Eliminar el usuario de la lista local
-        setState(prev => ({
-          ...prev,
-          users: prev.users.filter(user => user.id !== userId),
-        }));
-        
-        // Si es el usuario actual, limpiarlo
-        if (state.currentUser?.id === userId) {
-          setCurrentUser(null);
-        }
-        
-        setSuccess('Usuario eliminado exitosamente');
-        return true;
-      } else {
-        throw new Error(data.message || 'Error al eliminar usuario');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
       }
+
+      const result = await response.json(); // { message: string }
+      setState(prev => ({
+        ...prev,
+        users: prev.users.filter(user => user.id !== userId),
+      }));
+
+      if (state.currentUser?.id === userId) {
+        setCurrentUser(null);
+      }
+
+      setSuccess(result.message || 'Usuario eliminado exitosamente');
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setError(errorMessage);
@@ -242,12 +294,13 @@ export const useUsers = (): UsersState & UsersActions => {
   return {
     // Estado
     ...state,
-    
+
     // Acciones
     fetchUsers,
     fetchMe,
     createUser,
     updateUser,
+    updateUserRole,
     deleteUser,
     clearMessages,
     setCurrentUser,
